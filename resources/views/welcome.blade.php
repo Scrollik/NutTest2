@@ -19,11 +19,11 @@
             <div class="card" style="width: 18rem;">
                 <img src="{{asset('album_image/'.$album->image)}}" class="card-img-top" alt="...">
                 <div class="card-body">
-                    <h5 class="card-title">{{$album->name}}</h5>
-                    <p class="card-text">Исполнитель: {{$album->artist->name}}</p>
+                    <h5 class="card-title">{{ $album->name }}</h5>
+                    <p class="card-text">Исполнитель: {{ $album->artist->name }}</p>
                 </div>
                 <ul class="list-group list-group-flush">
-                    <li class="list-group-item">Описание: альбом исполнителя {{$album->description}}</li>
+                    <li class="list-group-item">Описание: {{ $album->description }}</li>
                 </ul>
                 <div class="card-body">
                     @auth()

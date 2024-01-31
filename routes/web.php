@@ -36,19 +36,19 @@ Route::group(['middleware' => 'auth'],function (){
     Route::get('/albumfindapi',[AlbumController::class,'findAlbumApi'])->name('album.findapi');
     Route::post('/albumstore',[AlbumController::class,'store'])->name('album.store');
     Route::get('/album/{id}',[AlbumController::class,'edit'])->name('album.edit')
-        ->where('id', '[1-9]+');
+        ->where('id', '[0-9]+');
     Route::put('/albumupdate',[AlbumController::class,'updateAlbum'])->name('album.update');
     Route::delete('/albumdelete/{id}',[AlbumController::class,'destroy'])->name('album.destroy')
-        ->where('id', '[1-9]+');
+        ->where('id', '[0-9]+');
 //    Роуты исполнителя
     Route::get('/artistcreate',[ArtistController::class,'create'])->name('artist.create');
     Route::get('/artistfindapi',[ArtistController::class,'findArtistApi'])->name('artist.findapi');
     Route::post('/artiststore',[ArtistController::class,'store'])->name('artist.store');
     Route::get('/artist/{id}',[ArtistController::class,'edit'])->name('artist.edit')
-    ->where('id', '[1-9]+');
+    ->where('id', '[0-9]+');
     Route::put('/artistupdate',[ArtistController::class,'update'])->name('artist.update');
     Route::delete('/artistdelete/{id}',[ArtistController::class,'destroy'])->name('artist.destroy')
-        ->where('id', '[1-9]+');
+        ->where('id', '[0-9]+');
     // Выход с аккаунта
     Route::post('/logout',[LoginController::class,'destroy'])->name('logout');
 });

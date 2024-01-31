@@ -14,21 +14,10 @@ use Ramsey\Collection\Collection;
 
 class AlbumRepository implements AlbumRepositoryInterface
 {
-    protected Album $albumInfo;
-
-    public function __construct(Album $albumInfo)
+    public function getAlbums(): ?LengthAwarePaginator
     {
-        $this->album = $albumInfo;
-    }
-
-    public function getAlbums(Request $request): ?LengthAwarePaginator
-    {
-        if (!empty($request->artist)) {
-            return $this->findByArtist($request->artist);
-        } else {
-            return Album::with('artist')
-                ->paginate(5);
-        }
+        return Album::with('artist')
+            ->paginate(5);
     }
 
     public function findByArtist(int $id): LengthAwarePaginator
@@ -38,89 +27,41 @@ class AlbumRepository implements AlbumRepositoryInterface
             ->paginate(5);
     }
 
-    public function createAlbum(array $validated): void
+    public function createAlbum(array $validated, string $imageName): bool
     {
-        if (!empty($validated['yourImage'])) {
-            $image = $validated['yourImage'];
-            $imageName = $validated['yourImage']->getClientOriginalName();
-            $image->move('album_image', $imageName);
-            Album::create([
-                'name' => $validated['name'],
-                'artist_id' => $validated['artist'],
-                'description' => $validated['descr'],
-                'image' => $imageName,
-            ]);
-        } else {
-            $contents = file_get_contents($validated['image']);
-            $imageName = substr($validated['image'], strrpos($validated['image'], '/') + 1);
-            Storage::disk('album_image')->put($imageName, $contents);
-            Album::create([
-                'name' => $validated['name'],
-                'artist_id' => $validated['artist'],
-                'description' => $validated['descr'],
-                'image' => $imageName,
-            ]);
-        }
-        Log::channel('album_creates')->info(
-            'Пользователь {user} создал альбом {name}',
-            [
-                'name' => $validated['name'],
-                'user' => Auth::user()->email,
-            ]
-        );
+       $album = Album::create([
+            'name' => $validated['name'],
+            'artist_id' => $validated['artist'],
+            'description' => $validated['descr'],
+            'image' => $imageName,
+        ]);
+        return $album->exists();
     }
 
-    public function getAlbum(int $id): Model
+    public function getAlbum(int $id): Album
     {
         return Album::where('id', $id)
             ->with('artist')
             ->first();
     }
 
-    public function updateAlbum(array $validated): void
+    public function updateAlbum(array $validated, string $imageName): bool
     {
-        if (!empty($validated['new_image'])) {
-            Storage::delete('album_image/' . $validated['image']);
-            $image = $validated['new_image'];
-            $imageName = $validated['new_image']->getClientOriginalName();
-            $image->move('album_image', $imageName);
-            Album::where('id', $validated['id'])
-                ->update([
-                    'name' => $validated['name'],
-                    'artist_id' => $validated['artist'],
-                    'description' => $validated['descr'],
-                    'image' => $imageName,
-                ]);
-        } else {
-            Album::where('id', $validated['id'])
-                ->update([
-                    'name' => $validated['name'],
-                    'artist_id' => $validated['artist'],
-                    'description' => $validated['descr'],
-                    'image' => $validated['image'],
-                ]);
-        }
-        Log::channel('album_updates')
-            ->info(
-                'Был изменен альбом: {name}, пользователем: {user}.',
-                [
-                    'name' => $validated['name'],
-                    'user' => Auth::user()->email,
-
-                ]
-            );
+        $updateAlbum = Album::where('id', $validated['id'])
+            ->update([
+                'name' => $validated['name'],
+                'artist_id' => $validated['artist'],
+                'description' => $validated['descr'],
+                'image' => $imageName,
+            ]);
+        return $updateAlbum;
     }
 
-    public function deleteAlbum(int $id): void
+    public function deleteAlbum(int $id): Album
     {
         $album = Album::find($id);
         Album::where('id', $id)->delete();
-        Storage::delete('album_image/' . $album->image);
-        Log::channel('album_deletes')
-            ->info(
-                'Информация об альбоме {name} удалена.',
-                ['name' => $album->name]
-            );
+        return $album;
     }
 
 }

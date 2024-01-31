@@ -7,7 +7,10 @@ use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 
 class ArtistService
@@ -21,7 +24,11 @@ class ArtistService
 
     public function getArtists(array $validated): ?LengthAwarePaginator
     {
-        return $this->artistRepository->getArtists($validated);
+        if (!empty($validated)) {
+            return $this->artistRepository->filterByName($validated['artist_name']);
+        } else {
+            return $this->artistRepository->getArtists();
+        }
     }
 
     public function getArtistsForList()
@@ -50,8 +57,25 @@ class ArtistService
 
     public function storeArtist(array $validated): void
     {
-
-        $this->artistRepository->createArtist($validated);
+        if (!empty($validated['yourImage'])) {
+            $image = $validated['yourImage'];
+            $imageName = $validated['yourImage']->getClientOriginalName();
+            $image->move('artist_image', $imageName);
+        } else {
+            $contents = file_get_contents($validated['image']);
+            $imageName = substr($validated['image'], strrpos($validated['image'], '/') + 1);
+            Storage::disk('artist_image')->put($imageName, $contents);
+        }
+        $result = $this->artistRepository->createArtist($validated, $imageName);
+        if ($result) {
+            Log::channel('artist_creates')->info(
+                'Пользователь {user} создал исполнителя {name}',
+                [
+                    'name' => $validated['name'],
+                    'user' => Auth::user()->email,
+                ]
+            );
+        }
     }
 
     public function getArtist(int $id): Model
@@ -59,14 +83,44 @@ class ArtistService
         return $this->artistRepository->getArtist($id);
     }
 
-    public function updateArtist(array $validated)
+    public function updateArtist(array $validated): void
     {
-        $this->artistRepository->updateArtist($validated);
+        if (!empty($validated['new_image'])) {
+            Storage::delete('artist_image/' . $validated['image']);
+            $image = $validated['new_image'];
+            $imageName = $validated['new_image']->getClientOriginalName();
+            $image->move('Artist_image', $imageName);
+        } else {
+            $contents = file_get_contents($validated['image']);
+            $imageName = substr($validated['image'], strrpos($validated['image'], '/') + 1);
+            Storage::delete('artist_image/' . $validated['image']);
+            Storage::disk('artist_image')->put($imageName, $contents);
+        }
+        $result = $this->artistRepository->updateArtist($validated, $imageName);
+        if ($result) {
+            Log::channel('artist_updates')
+                ->info(
+                    'Был изменен исполнитель: {name}, пользователем: {user}.',
+                    [
+                        'name' => $validated['name'],
+                        'user' => Auth::user()->email,
+                    ]
+                );
+        }
     }
 
     public function deleteArtist(int $id): void
     {
-        $this->artistRepository->deleteArtist($id);
+       $artist = $this->artistRepository->deleteArtist($id);
+       if (!empty($artist))
+       {
+           Storage::delete('artist_image/' . $artist->image);
+           Log::channel('artist_deletes')
+               ->info(
+                   'Информация об альбоме {name} удалена.',
+                   ['name' => $artist->name]
+               );
+       }
     }
 
 
